@@ -192,6 +192,11 @@
                 align-items: start;
             }
 
+            .main-stack {
+                display: grid;
+                gap: 24px;
+            }
+
             .panel {
                 border-radius: 24px;
                 padding: 20px;
@@ -682,48 +687,91 @@
             </header>
 
             <main class="layout">
-                <section class="panel wheel-panel panel-reveal">
-                    <div class="panel-head">
-                        <div>
-                            <p class="section-tag">Wheel</p>
-                            <h2>Putar Roda</h2>
+                <div class="main-stack">
+                    <section class="panel wheel-panel panel-reveal">
+                        <div class="panel-head">
+                            <div>
+                                <p class="section-tag">Wheel</p>
+                                <h2>Putar Roda</h2>
+                            </div>
+                            <button id="spinButton" class="btn" type="button">
+                                Spin
+                            </button>
                         </div>
-                        <button id="spinButton" class="btn" type="button">
-                            Spin
-                        </button>
-                    </div>
 
-                    <div class="wheel-wrap">
-                        <div class="pointer" aria-hidden="true"></div>
-                        <div class="wheel-shadow" aria-hidden="true"></div>
+                        <div class="wheel-wrap">
+                            <div class="pointer" aria-hidden="true"></div>
+                            <div class="wheel-shadow" aria-hidden="true"></div>
+                            <div
+                                id="wheel"
+                                class="wheel"
+                                aria-label="Spin wheel"
+                            ></div>
+                        </div>
+
+                        <div class="status-grid">
+                            <div class="status">
+                                <span>Durasi</span>
+                                <strong id="durationStatus">5 detik</strong>
+                            </div>
+                            <div class="status">
+                                <span>Mode</span>
+                                <strong id="modeStatus">Normal</strong>
+                            </div>
+                            <div class="status">
+                                <span>Pemenang Terakhir</span>
+                                <strong id="lastWinnerStatus">Belum ada</strong>
+                            </div>
+                        </div>
+
                         <div
-                            id="wheel"
-                            class="wheel"
-                            aria-label="Spin wheel"
+                            id="statusBanner"
+                            class="status-banner"
+                            aria-live="polite"
                         ></div>
-                    </div>
+                    </section>
 
-                    <div class="status-grid">
-                        <div class="status">
-                            <span>Durasi</span>
-                            <strong id="durationStatus">5 detik</strong>
+                    <section
+                        class="panel panel-reveal"
+                        style="animation-delay: 0.12s"
+                    >
+                        <div class="panel-head">
+                            <div>
+                                <p class="section-tag">Settings</p>
+                                <h2>Pengaturan</h2>
+                            </div>
                         </div>
-                        <div class="status">
-                            <span>Mode</span>
-                            <strong id="modeStatus">Normal</strong>
-                        </div>
-                        <div class="status">
-                            <span>Pemenang Terakhir</span>
-                            <strong id="lastWinnerStatus">Belum ada</strong>
-                        </div>
-                    </div>
 
-                    <div
-                        id="statusBanner"
-                        class="status-banner"
-                        aria-live="polite"
-                    ></div>
-                </section>
+                        <div class="stack">
+                            <div>
+                                <label class="label" for="durationInput"
+                                    >Durasi putaran (detik)</label
+                                >
+                                <input
+                                    id="durationInput"
+                                    type="number"
+                                    min="2"
+                                    max="15"
+                                    step="0.5"
+                                />
+                                <p class="helper-text">
+                                    Gunakan 2-15 detik untuk hasil yang tetap
+                                    nyaman dilihat.
+                                </p>
+                            </div>
+
+                            <label class="toggle">
+                                <input id="autoRemoveInput" type="checkbox" />
+                                <span>Auto-remove winner</span>
+                            </label>
+
+                            <label class="toggle">
+                                <input id="soundInput" type="checkbox" />
+                                <span>Aktifkan sound</span>
+                            </label>
+                        </div>
+                    </section>
+                </div>
 
                 <aside class="controls">
                     <section
@@ -778,47 +826,6 @@
                         </div>
 
                         <div id="optionList" class="option-list"></div>
-                    </section>
-
-                    <section
-                        class="panel panel-reveal"
-                        style="animation-delay: 0.12s"
-                    >
-                        <div class="panel-head">
-                            <div>
-                                <p class="section-tag">Settings</p>
-                                <h2>Pengaturan</h2>
-                            </div>
-                        </div>
-
-                        <div class="stack">
-                            <div>
-                                <label class="label" for="durationInput"
-                                    >Durasi putaran (detik)</label
-                                >
-                                <input
-                                    id="durationInput"
-                                    type="number"
-                                    min="2"
-                                    max="15"
-                                    step="0.5"
-                                />
-                                <p class="helper-text">
-                                    Gunakan 2-15 detik untuk hasil yang tetap
-                                    nyaman dilihat.
-                                </p>
-                            </div>
-
-                            <label class="toggle">
-                                <input id="autoRemoveInput" type="checkbox" />
-                                <span>Auto-remove winner</span>
-                            </label>
-
-                            <label class="toggle">
-                                <input id="soundInput" type="checkbox" />
-                                <span>Aktifkan sound</span>
-                            </label>
-                        </div>
                     </section>
 
                     <section
