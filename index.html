@@ -1,0 +1,1407 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Spin Wheel</title>
+  <style>
+    :root {
+      --bg-1: #f6efe2;
+      --bg-2: #e5d1b2;
+      --panel: rgba(255, 249, 239, 0.88);
+      --panel-border: rgba(101, 67, 33, 0.14);
+      --text: #2c2319;
+      --muted: #6d5a47;
+      --accent: #d96f32;
+      --accent-2: #a44419;
+      --ok: #2e7b58;
+      --shadow: 0 18px 42px rgba(73, 44, 18, 0.15);
+      --shadow-soft: 0 10px 24px rgba(73, 44, 18, 0.09);
+      --wheel-size: min(78vw, 460px);
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+      color: var(--text);
+      background:
+        radial-gradient(circle at top left, rgba(255, 255, 255, 0.78), transparent 30%),
+        radial-gradient(circle at bottom right, rgba(217, 111, 50, 0.17), transparent 26%),
+        linear-gradient(135deg, var(--bg-1), var(--bg-2));
+      position: relative;
+      overflow-x: hidden;
+    }
+
+    body::before,
+    body::after {
+      content: "";
+      position: fixed;
+      border-radius: 999px;
+      pointer-events: none;
+      z-index: 0;
+      filter: blur(18px);
+      opacity: 0.5;
+    }
+
+    body::before {
+      top: -80px;
+      right: -40px;
+      width: 260px;
+      height: 260px;
+      background: radial-gradient(circle, rgba(255, 255, 255, 0.75), transparent 68%);
+    }
+
+    body::after {
+      bottom: -90px;
+      left: -50px;
+      width: 320px;
+      height: 320px;
+      background: radial-gradient(circle, rgba(217, 111, 50, 0.18), transparent 70%);
+    }
+
+    button, input, textarea {
+      font: inherit;
+    }
+
+    button {
+      cursor: pointer;
+      border: 0;
+    }
+
+    .app {
+      width: min(1220px, calc(100% - 28px));
+      margin: 0 auto;
+      padding: 28px 0 40px;
+      position: relative;
+      z-index: 1;
+    }
+
+    .hero {
+      display: flex;
+      justify-content: space-between;
+      gap: 20px;
+      align-items: end;
+      margin-bottom: 24px;
+      padding: 8px 4px;
+    }
+
+    .eyebrow,
+    .section-tag {
+      margin: 0 0 8px;
+      font-size: 0.76rem;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: var(--accent-2);
+    }
+
+    h1, h2 {
+      margin: 0;
+      font-family: "Trebuchet MS", "Segoe UI", sans-serif;
+      line-height: 1.05;
+    }
+
+    h1 {
+      font-size: clamp(2.5rem, 5vw, 4.7rem);
+    }
+
+    h2 {
+      font-size: 1.2rem;
+    }
+
+    .hero p:last-child {
+      margin: 12px 0 0;
+      max-width: 720px;
+      color: var(--muted);
+    }
+
+    .hero-stats {
+      display: flex;
+      gap: 12px;
+    }
+
+    .stat,
+    .panel {
+      background: var(--panel);
+      border: 1px solid var(--panel-border);
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(12px);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .stat::before,
+    .panel::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(180deg, rgba(255, 255, 255, 0.32), transparent 34%);
+      pointer-events: none;
+    }
+
+    .stat {
+      min-width: 124px;
+      border-radius: 18px;
+      padding: 14px 16px;
+    }
+
+    .stat span,
+    .status span,
+    .label {
+      display: block;
+      font-size: 0.82rem;
+      color: var(--muted);
+      margin-bottom: 6px;
+    }
+
+    .stat strong {
+      font-size: 1.6rem;
+    }
+
+    .layout {
+      display: grid;
+      grid-template-columns: minmax(0, 1.25fr) minmax(340px, 0.95fr);
+      gap: 24px;
+      align-items: start;
+    }
+
+    .panel {
+      border-radius: 24px;
+      padding: 20px;
+    }
+
+    .panel-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 14px;
+      margin-bottom: 18px;
+      position: relative;
+      z-index: 1;
+    }
+
+    .wheel-panel {
+      overflow: hidden;
+      background:
+        radial-gradient(circle at top, rgba(255, 255, 255, 0.36), transparent 28%),
+        var(--panel);
+    }
+
+    .wheel-wrap {
+      position: relative;
+      display: grid;
+      place-items: center;
+      min-height: calc(var(--wheel-size) + 38px);
+      padding: 16px 10px;
+    }
+
+    .wheel-shadow {
+      position: absolute;
+      width: calc(var(--wheel-size) + 20px);
+      height: calc(var(--wheel-size) + 20px);
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(0, 0, 0, 0.18), transparent 64%);
+      filter: blur(16px);
+      transform: translateY(18px);
+    }
+
+    .pointer {
+      position: absolute;
+      top: 0;
+      z-index: 4;
+      width: 0;
+      height: 0;
+      border-left: 18px solid transparent;
+      border-right: 18px solid transparent;
+      border-top: 34px solid #7f2d14;
+      filter: drop-shadow(0 8px 10px rgba(0, 0, 0, 0.22));
+    }
+
+    .wheel {
+      position: relative;
+      width: var(--wheel-size);
+      height: var(--wheel-size);
+      border-radius: 50%;
+      border: 12px solid #fff5e8;
+      box-shadow: inset 0 0 0 7px rgba(255, 255, 255, 0.35), 0 14px 30px rgba(60, 34, 11, 0.16);
+      transition: transform 5s cubic-bezier(0.12, 0.8, 0.18, 1);
+      overflow: hidden;
+      background: #f7e6cf;
+    }
+
+    .wheel-svg {
+      width: 100%;
+      height: 100%;
+      display: block;
+    }
+
+    .wheel-slice {
+      stroke: rgba(255, 245, 232, 0.9);
+      stroke-width: 2;
+    }
+
+    .wheel-text {
+      font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+      font-weight: 700;
+      fill: #fffaf4;
+      text-anchor: middle;
+      dominant-baseline: middle;
+      paint-order: stroke;
+      stroke: rgba(35, 20, 8, 0.22);
+      stroke-width: 2px;
+      stroke-linejoin: round;
+      pointer-events: none;
+    }
+
+    .wheel::after {
+      content: "";
+      position: absolute;
+      inset: 50%;
+      width: 76px;
+      height: 76px;
+      transform: translate(-50%, -50%);
+      border-radius: 50%;
+      background:
+        radial-gradient(circle at 35% 35%, #fffdf9, #f0dac0 65%, #c9894c 100%);
+      box-shadow:
+        inset 0 4px 10px rgba(255, 255, 255, 0.7),
+        0 8px 18px rgba(74, 43, 15, 0.2);
+      z-index: 2;
+    }
+
+    .wheel::before {
+      content: "SPIN";
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      z-index: 3;
+      font-size: 0.95rem;
+      font-weight: 800;
+      letter-spacing: 0.16em;
+      color: #7a3413;
+    }
+
+    .wheel.empty {
+      display: grid;
+      place-items: center;
+      width: var(--wheel-size);
+      height: var(--wheel-size);
+      aspect-ratio: 1 / 1;
+      border-radius: 50%;
+      clip-path: circle(50% at 50% 50%);
+      background: linear-gradient(135deg, #dccbae, #fbf4ea);
+    }
+
+    .empty-wheel {
+      width: 70%;
+      max-width: 220px;
+      text-align: center;
+      color: #675643;
+      font-weight: 600;
+      line-height: 1.4;
+    }
+
+    .status-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 12px;
+      margin-top: 8px;
+    }
+
+    .status {
+      padding: 14px;
+      border-radius: 16px;
+      background: rgba(255, 255, 255, 0.65);
+      border: 1px solid rgba(101, 67, 33, 0.08);
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.45);
+    }
+
+    .controls {
+      display: grid;
+      gap: 24px;
+    }
+
+    .inline-form {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 10px;
+      margin-bottom: 14px;
+    }
+
+    input[type="text"],
+    input[type="number"],
+    textarea {
+      width: 100%;
+      border: 1px solid rgba(101, 67, 33, 0.16);
+      border-radius: 14px;
+      background: rgba(255, 255, 255, 0.84);
+      color: var(--text);
+      padding: 12px 14px;
+    }
+
+    textarea {
+      resize: vertical;
+    }
+
+    .btn,
+    .btn-secondary,
+    .btn-ghost,
+    .btn-danger {
+      border-radius: 14px;
+      padding: 12px 16px;
+      font-weight: 600;
+      transition: transform 0.18s ease, box-shadow 0.18s ease, background 0.18s ease, border-color 0.18s ease;
+    }
+
+    .btn {
+      color: #fff;
+      background: linear-gradient(135deg, var(--accent), #ef9355);
+      box-shadow: 0 10px 20px rgba(217, 111, 50, 0.28);
+    }
+
+    .btn:disabled {
+      opacity: 0.54;
+      cursor: not-allowed;
+      box-shadow: none;
+    }
+
+    button:focus-visible,
+    input:focus-visible,
+    textarea:focus-visible {
+      outline: 3px solid rgba(217, 111, 50, 0.28);
+      outline-offset: 2px;
+    }
+
+    .btn:not(:disabled):hover,
+    .btn-secondary:hover,
+    .btn-ghost:hover,
+    .btn-danger:hover {
+      transform: translateY(-1px);
+    }
+
+    .btn:not(:disabled):hover {
+      box-shadow: 0 14px 26px rgba(217, 111, 50, 0.34);
+    }
+
+    .btn-secondary,
+    .btn-ghost,
+    .btn-danger {
+      background: rgba(255, 255, 255, 0.75);
+      border: 1px solid rgba(101, 67, 33, 0.12);
+      color: var(--text);
+      box-shadow: var(--shadow-soft);
+    }
+
+    .btn-danger {
+      color: #7a381c;
+    }
+
+    .stack {
+      display: grid;
+      gap: 12px;
+    }
+
+    .helper-text {
+      margin: 6px 0 0;
+      color: var(--muted);
+      font-size: 0.92rem;
+      line-height: 1.45;
+    }
+
+    .toolbar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .status-banner {
+      margin-top: 14px;
+      padding: 12px 14px;
+      border-radius: 16px;
+      background: rgba(255, 255, 255, 0.72);
+      border: 1px solid rgba(101, 67, 33, 0.1);
+      color: var(--muted);
+      line-height: 1.45;
+    }
+
+    .option-list,
+    .history-list {
+      display: grid;
+      gap: 12px;
+      margin-top: 16px;
+    }
+
+    .option-card,
+    .history-card {
+      background: rgba(255, 255, 255, 0.68);
+      border: 1px solid rgba(101, 67, 33, 0.08);
+      border-radius: 16px;
+      padding: 12px;
+      box-shadow: var(--shadow-soft);
+    }
+
+    .option-card {
+      display: grid;
+      grid-template-columns: 38px 1fr auto;
+      gap: 10px;
+      align-items: center;
+    }
+
+    .color-input {
+      width: 38px;
+      height: 38px;
+      padding: 0;
+      overflow: hidden;
+      border-radius: 10px;
+    }
+
+    .history-card strong {
+      display: block;
+      margin-bottom: 4px;
+      font-size: 1.04rem;
+    }
+
+    .history-card span {
+      color: var(--muted);
+      font-size: 0.9rem;
+    }
+
+    .toggle {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .empty {
+      padding: 16px;
+      border-radius: 16px;
+      text-align: center;
+      color: var(--muted);
+      border: 1px dashed rgba(101, 67, 33, 0.2);
+    }
+
+    .empty strong {
+      display: block;
+      margin-bottom: 4px;
+      color: var(--text);
+    }
+
+    .modal {
+      position: fixed;
+      inset: 0;
+      display: none;
+      place-items: center;
+      padding: 22px;
+      background: rgba(29, 21, 12, 0.48);
+      backdrop-filter: blur(8px);
+      z-index: 9999;
+    }
+
+    .modal.show {
+      display: grid;
+    }
+
+    .modal-card {
+      width: min(440px, 100%);
+      border-radius: 22px;
+      padding: 26px;
+      text-align: center;
+      background: #fff8ee;
+      box-shadow: var(--shadow);
+      border: 1px solid rgba(101, 67, 33, 0.1);
+    }
+
+    .winner {
+      margin: 18px 0 22px;
+      font-size: clamp(2rem, 5vw, 3.1rem);
+      font-family: "Trebuchet MS", "Segoe UI", sans-serif;
+      color: var(--ok);
+    }
+
+    .winner-pulse {
+      animation: winnerPulse 0.8s ease-out;
+    }
+
+    .wheel-celebrate {
+      animation: wheelCelebrate 0.8s ease-out;
+    }
+
+    .panel-reveal {
+      animation: panelReveal 0.5s ease-out both;
+    }
+
+    @keyframes winnerPulse {
+      0% {
+        transform: scale(0.9);
+        opacity: 0.4;
+      }
+      60% {
+        transform: scale(1.06);
+        opacity: 1;
+      }
+      100% {
+        transform: scale(1);
+      }
+    }
+
+    @keyframes wheelCelebrate {
+      0% {
+        filter: saturate(1);
+      }
+      40% {
+        filter: saturate(1.3) brightness(1.04);
+      }
+      100% {
+        filter: saturate(1);
+      }
+    }
+
+    @keyframes panelReveal {
+      0% {
+        opacity: 0;
+        transform: translateY(10px);
+      }
+      100% {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    @media (max-width: 980px) {
+      .layout {
+        grid-template-columns: 1fr;
+      }
+
+      .hero {
+        flex-direction: column;
+        align-items: start;
+      }
+    }
+
+    @media (max-width: 640px) {
+      .app {
+        width: min(100% - 16px, 1220px);
+        padding-top: 18px;
+      }
+
+      .panel {
+        padding: 16px;
+      }
+
+      .status-grid,
+      .inline-form,
+      .option-card {
+        grid-template-columns: 1fr;
+      }
+
+      .hero-stats {
+        width: 100%;
+      }
+
+      .stat {
+        flex: 1;
+      }
+
+      .wheel::after {
+        width: 64px;
+        height: 64px;
+      }
+
+      .wheel::before {
+        font-size: 0.82rem;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <header class="hero">
+      <div>
+        <p class="eyebrow">Dynamic Spin Wheel</p>
+        <h1>Spin Wheel</h1>
+        <p>Aplikasi website interaktif untuk mengacak pilihan dengan CRUD opsi, bulk import, mode eliminasi, popup pemenang, riwayat hasil, dan pengaturan durasi putaran.</p>
+      </div>
+      <div class="hero-stats">
+        <div class="stat">
+          <span>Total Opsi</span>
+          <strong id="optionCount">0</strong>
+        </div>
+        <div class="stat">
+          <span>Total Riwayat</span>
+          <strong id="historyCount">0</strong>
+        </div>
+      </div>
+    </header>
+
+    <main class="layout">
+      <section class="panel wheel-panel panel-reveal">
+        <div class="panel-head">
+          <div>
+            <p class="section-tag">Wheel</p>
+            <h2>Putar Roda</h2>
+          </div>
+          <button id="spinButton" class="btn" type="button">Spin</button>
+        </div>
+
+        <div class="wheel-wrap">
+          <div class="pointer" aria-hidden="true"></div>
+          <div class="wheel-shadow" aria-hidden="true"></div>
+          <div id="wheel" class="wheel" aria-label="Spin wheel"></div>
+        </div>
+
+        <div class="status-grid">
+          <div class="status">
+            <span>Durasi</span>
+            <strong id="durationStatus">5 detik</strong>
+          </div>
+          <div class="status">
+            <span>Mode</span>
+            <strong id="modeStatus">Normal</strong>
+          </div>
+          <div class="status">
+            <span>Pemenang Terakhir</span>
+            <strong id="lastWinnerStatus">Belum ada</strong>
+          </div>
+        </div>
+
+        <div id="statusBanner" class="status-banner" aria-live="polite"></div>
+      </section>
+
+      <aside class="controls">
+        <section class="panel panel-reveal" style="animation-delay: 0.06s;">
+          <div class="panel-head">
+            <div>
+              <p class="section-tag">Options</p>
+              <h2>Kelola Opsi</h2>
+            </div>
+          </div>
+
+          <form id="addForm" class="inline-form">
+            <input id="optionInput" type="text" maxlength="60" placeholder="Masukkan opsi baru" required>
+            <button class="btn" type="submit">Tambah</button>
+          </form>
+
+          <p class="helper-text">Tambahkan minimal 2 opsi agar roda bisa diputar. Nama dan warna opsi bisa diedit langsung dari daftar.</p>
+
+          <div class="stack">
+            <label class="label" for="bulkInput">Bulk import</label>
+            <textarea id="bulkInput" rows="5" placeholder="Satu opsi per baris"></textarea>
+            <div class="toolbar">
+              <button id="bulkButton" class="btn-secondary" type="button">Import Opsi</button>
+              <span class="helper-text">Satu baris untuk satu pilihan.</span>
+            </div>
+          </div>
+
+          <div id="optionList" class="option-list"></div>
+        </section>
+
+        <section class="panel panel-reveal" style="animation-delay: 0.12s;">
+          <div class="panel-head">
+            <div>
+              <p class="section-tag">Settings</p>
+              <h2>Pengaturan</h2>
+            </div>
+          </div>
+
+          <div class="stack">
+            <div>
+              <label class="label" for="durationInput">Durasi putaran (detik)</label>
+              <input id="durationInput" type="number" min="2" max="15" step="0.5">
+              <p class="helper-text">Gunakan 2-15 detik untuk hasil yang tetap nyaman dilihat.</p>
+            </div>
+
+            <label class="toggle">
+              <input id="autoRemoveInput" type="checkbox">
+              <span>Auto-remove winner</span>
+            </label>
+
+            <label class="toggle">
+              <input id="soundInput" type="checkbox">
+              <span>Aktifkan sound</span>
+            </label>
+          </div>
+        </section>
+
+        <section class="panel panel-reveal" style="animation-delay: 0.18s;">
+          <div class="panel-head">
+            <div>
+              <p class="section-tag">History</p>
+              <h2>Riwayat Pemenang</h2>
+            </div>
+            <button id="clearHistoryButton" class="btn-ghost" type="button">Clear</button>
+          </div>
+
+          <div id="historyList" class="history-list"></div>
+        </section>
+      </aside>
+    </main>
+  </div>
+
+  <div id="winnerModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="winnerTitle">
+    <div class="modal-card">
+      <p class="section-tag">Winner</p>
+      <h2 id="winnerTitle">Hasil Putaran</h2>
+      <div id="winnerText" class="winner"></div>
+      <button id="closeModalButton" class="btn" type="button">Tutup</button>
+    </div>
+  </div>
+
+  <script>
+    const STORAGE_KEY = "spin-wheel-prd-app";
+    const state = loadState();
+
+    const ui = {
+      wheel: document.getElementById("wheel"),
+      spinButton: document.getElementById("spinButton"),
+      optionCount: document.getElementById("optionCount"),
+      historyCount: document.getElementById("historyCount"),
+      durationStatus: document.getElementById("durationStatus"),
+      modeStatus: document.getElementById("modeStatus"),
+      lastWinnerStatus: document.getElementById("lastWinnerStatus"),
+      statusBanner: document.getElementById("statusBanner"),
+      addForm: document.getElementById("addForm"),
+      optionInput: document.getElementById("optionInput"),
+      bulkInput: document.getElementById("bulkInput"),
+      bulkButton: document.getElementById("bulkButton"),
+      optionList: document.getElementById("optionList"),
+      durationInput: document.getElementById("durationInput"),
+      autoRemoveInput: document.getElementById("autoRemoveInput"),
+      soundInput: document.getElementById("soundInput"),
+      clearHistoryButton: document.getElementById("clearHistoryButton"),
+      historyList: document.getElementById("historyList"),
+      winnerModal: document.getElementById("winnerModal"),
+      winnerText: document.getElementById("winnerText"),
+      closeModalButton: document.getElementById("closeModalButton")
+    };
+
+    bindEvents();
+    render();
+
+    function loadState() {
+      const initial = {
+        options: [
+          createOption("Kopi"),
+          createOption("Teh"),
+          createOption("Matcha"),
+          createOption("Jus"),
+          createOption("Soda"),
+          createOption("Air Mineral")
+        ],
+        settings: {
+          spinDuration: 5,
+          autoRemoveWinner: false,
+          enableSound: false
+        },
+        history: [],
+        isSpinning: false,
+        currentRotation: 0
+      };
+
+      try {
+        const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || "null");
+        if (!saved) {
+          return initial;
+        }
+
+        return {
+          options: Array.isArray(saved.options) && saved.options.length ? saved.options : initial.options,
+          settings: {
+            spinDuration: clampNumber(saved.settings && saved.settings.spinDuration, 2, 15, 5),
+            autoRemoveWinner: Boolean(saved.settings && saved.settings.autoRemoveWinner),
+            enableSound: Boolean(saved.settings && saved.settings.enableSound)
+          },
+          history: Array.isArray(saved.history) ? saved.history : [],
+          isSpinning: false,
+          currentRotation: Number(saved.currentRotation) || 0
+        };
+      } catch (error) {
+        return initial;
+      }
+    }
+
+    function bindEvents() {
+      ui.addForm.addEventListener("submit", function (event) {
+        event.preventDefault();
+        const label = ui.optionInput.value.trim();
+        if (!label) {
+          return;
+        }
+
+        state.options.push(createOption(label));
+        ui.optionInput.value = "";
+        commit();
+        ui.optionInput.focus();
+      });
+
+      ui.bulkButton.addEventListener("click", function () {
+        const items = ui.bulkInput.value
+          .split("\n")
+          .map(function (item) { return item.trim(); })
+          .filter(Boolean);
+
+        if (!items.length) {
+          return;
+        }
+
+        items.forEach(function (item) {
+          state.options.push(createOption(item));
+        });
+
+        ui.bulkInput.value = "";
+        commit();
+        ui.bulkInput.focus();
+      });
+
+      ui.bulkInput.addEventListener("input", renderMeta);
+
+      ui.spinButton.addEventListener("click", spinWheel);
+
+      ui.durationInput.addEventListener("change", function () {
+        state.settings.spinDuration = clampNumber(ui.durationInput.value, 2, 15, 5);
+        commit();
+      });
+
+      ui.autoRemoveInput.addEventListener("change", function () {
+        state.settings.autoRemoveWinner = ui.autoRemoveInput.checked;
+        commit();
+      });
+
+      ui.soundInput.addEventListener("change", function () {
+        state.settings.enableSound = ui.soundInput.checked;
+        commit();
+      });
+
+      ui.clearHistoryButton.addEventListener("click", function () {
+        state.history = [];
+        commit();
+      });
+
+      document.addEventListener("keydown", function (event) {
+        if (event.key === "Escape" && ui.winnerModal.classList.contains("show")) {
+          closeModal();
+        }
+      });
+
+      ui.optionList.addEventListener("input", function (event) {
+        const target = event.target;
+        const id = target.getAttribute("data-id");
+        if (!id) {
+          return;
+        }
+
+        const option = findOption(id);
+        if (!option) {
+          return;
+        }
+
+        if (target.getAttribute("data-role") === "label") {
+          option.label = target.value.slice(0, 60);
+          saveState();
+          renderWheel();
+          renderMeta();
+          return;
+        }
+
+        if (target.getAttribute("data-role") === "color") {
+          option.color = target.value;
+          commit();
+        }
+      });
+
+      ui.optionList.addEventListener("change", function (event) {
+        const target = event.target;
+        if (target.getAttribute("data-role") !== "label") {
+          return;
+        }
+
+        const option = findOption(target.getAttribute("data-id"));
+        if (!option) {
+          return;
+        }
+
+        option.label = target.value.trim() || "Tanpa Nama";
+        commit();
+      });
+
+      ui.optionList.addEventListener("click", function (event) {
+        const button = event.target.closest("button[data-action='delete']");
+        if (!button) {
+          return;
+        }
+
+        const id = button.getAttribute("data-id");
+        state.options = state.options.filter(function (item) {
+          return item.id !== id;
+        });
+        commit();
+      });
+
+      ui.closeModalButton.addEventListener("click", closeModal);
+
+      ui.winnerModal.addEventListener("click", function (event) {
+        if (event.target === ui.winnerModal) {
+          closeModal();
+        }
+      });
+    }
+
+    function render() {
+      renderWheel();
+      renderOptions();
+      renderSettings();
+      renderHistory();
+      renderMeta();
+    }
+
+    function renderWheel() {
+      const count = state.options.length;
+      ui.wheel.classList.toggle("empty", count === 0);
+      ui.wheel.style.transitionDuration = state.settings.spinDuration + "s";
+      ui.wheel.style.transform = "rotate(" + state.currentRotation + "deg)";
+
+      if (!count) {
+        ui.wheel.innerHTML = buildEmptyWheelSvg();
+        return;
+      }
+
+      const angle = 360 / count;
+      const labelMetrics = getWheelLabelMetrics(count);
+      ui.wheel.innerHTML = buildWheelSvg(state.options, angle, labelMetrics);
+    }
+
+    function renderOptions() {
+      if (!state.options.length) {
+        ui.optionList.innerHTML = '<div class="empty"><strong>Belum ada opsi</strong><span>Tambah opsi baru atau gunakan bulk import agar roda siap diputar.</span></div>';
+        return;
+      }
+
+      ui.optionList.innerHTML = state.options.map(function (option, index) {
+        const color = option.color || getAutoColor(index, state.options.length);
+        return '' +
+          '<div class="option-card">' +
+            '<input class="color-input" type="color" value="' + escapeAttribute(color) + '" data-id="' + escapeAttribute(option.id) + '" data-role="color" aria-label="Warna opsi">' +
+            '<input type="text" maxlength="60" value="' + escapeAttribute(option.label) + '" data-id="' + escapeAttribute(option.id) + '" data-role="label" aria-label="Nama opsi">' +
+            '<button class="btn-danger" type="button" data-action="delete" data-id="' + escapeAttribute(option.id) + '">Hapus</button>' +
+          '</div>';
+      }).join("");
+    }
+
+    function renderSettings() {
+      ui.durationInput.value = String(state.settings.spinDuration);
+      ui.autoRemoveInput.checked = state.settings.autoRemoveWinner;
+      ui.soundInput.checked = state.settings.enableSound;
+    }
+
+    function renderHistory() {
+      if (!state.history.length) {
+        ui.historyList.innerHTML = '<div class="empty"><strong>Belum ada riwayat</strong><span>Hasil spin pertama akan muncul di sini.</span></div>';
+        return;
+      }
+
+      ui.historyList.innerHTML = state.history.slice().reverse().map(function (item) {
+        return '' +
+          '<div class="history-card">' +
+            '<strong>' + escapeHtml(item.winnerLabel) + '</strong>' +
+            '<span>' + escapeHtml(formatDate(item.timestamp)) + '</span>' +
+          '</div>';
+      }).join("");
+    }
+
+    function renderMeta() {
+      const optionCount = state.options.length;
+      ui.optionCount.textContent = String(optionCount);
+      ui.historyCount.textContent = String(state.history.length);
+      ui.durationStatus.textContent = state.settings.spinDuration + " detik";
+      ui.modeStatus.textContent = state.settings.autoRemoveWinner ? "Eliminasi" : "Normal";
+      ui.lastWinnerStatus.textContent = state.history[0] ? state.history[0].winnerLabel : "Belum ada";
+      ui.spinButton.disabled = state.isSpinning || optionCount < 2;
+      ui.spinButton.textContent = state.isSpinning ? "Memutar..." : (optionCount < 2 ? "Butuh 2 Opsi" : "Spin");
+      ui.clearHistoryButton.disabled = state.history.length === 0;
+      ui.bulkButton.disabled = !ui.bulkInput.value.trim();
+      ui.statusBanner.textContent = getStatusMessage();
+    }
+
+    function spinWheel() {
+      if (state.isSpinning || state.options.length < 2) {
+        return;
+      }
+
+      state.isSpinning = true;
+      renderMeta();
+
+      const winnerIndex = randomIndex(state.options.length);
+      const winner = state.options[winnerIndex];
+      const segment = 360 / state.options.length;
+      const winnerStart = winnerIndex * segment;
+      const winnerEnd = winnerStart + segment;
+      const safeMargin = Math.min(segment * 0.22, 8);
+      const minAngle = winnerStart + safeMargin;
+      const maxAngle = winnerEnd - safeMargin;
+      const landingAngle = randomBetween(minAngle, maxAngle);
+      const targetRotation = (360 - landingAngle) % 360;
+      const normalized = ((state.currentRotation % 360) + 360) % 360;
+      const fullTurns = 6 + randomIndex(4);
+      const delta = fullTurns * 360 + ((targetRotation - normalized + 360) % 360);
+
+      state.currentRotation += delta;
+      saveState();
+
+      if (state.settings.enableSound) {
+        playSpinSound(state.settings.spinDuration);
+      }
+
+      requestAnimationFrame(function () {
+        ui.wheel.style.transform = "rotate(" + state.currentRotation + "deg)";
+      });
+
+      window.setTimeout(function () {
+        state.isSpinning = false;
+        state.history.unshift({
+          id: createId(),
+          winnerLabel: winner.label,
+          timestamp: new Date().toISOString()
+        });
+
+        if (state.settings.autoRemoveWinner) {
+          state.options = state.options.filter(function (item) {
+            return item.id !== winner.id;
+          });
+        }
+
+        commit();
+        openModal(winner.label);
+      }, state.settings.spinDuration * 1000);
+    }
+
+    function openModal(label) {
+      ui.winnerText.textContent = label;
+      ui.winnerText.classList.remove("winner-pulse");
+      ui.wheel.classList.remove("wheel-celebrate");
+      void ui.winnerText.offsetWidth;
+      ui.winnerText.classList.add("winner-pulse");
+      ui.wheel.classList.add("wheel-celebrate");
+      ui.winnerModal.classList.add("show");
+      if (state.settings.enableSound) {
+        playWinSound();
+      }
+    }
+
+    function closeModal() {
+      ui.winnerModal.classList.remove("show");
+      ui.wheel.classList.remove("wheel-celebrate");
+      ui.spinButton.focus();
+    }
+
+    function getStatusMessage() {
+      if (state.isSpinning) {
+        return "Roda sedang berputar. Tunggu hingga animasi selesai untuk melihat pemenangnya.";
+      }
+
+      if (state.options.length === 0) {
+        return "Belum ada opsi. Tambahkan pilihan baru atau lakukan bulk import untuk mulai.";
+      }
+
+      if (state.options.length === 1) {
+        return "Baru ada 1 opsi. Tambahkan 1 opsi lagi agar tombol spin aktif.";
+      }
+
+      if (state.settings.autoRemoveWinner) {
+        return "Mode eliminasi aktif. Pemenang akan otomatis dihapus setelah setiap putaran.";
+      }
+
+      return "Roda siap diputar. Anda bisa edit nama dan warna opsi langsung dari daftar.";
+    }
+
+    function commit() {
+      saveState();
+      render();
+    }
+
+    function saveState() {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify({
+        options: state.options,
+        settings: state.settings,
+        history: state.history,
+        currentRotation: state.currentRotation
+      }));
+    }
+
+    function createOption(label) {
+      return {
+        id: createId(),
+        label: label,
+        color: "",
+        weight: 1
+      };
+    }
+
+    function getAutoColor(index, total) {
+      const count = Math.max(total, 1);
+      const goldenAngle = 137.508;
+      const baseHue = (index * goldenAngle + 18) % 360;
+      const spreadBoost = count > 10 ? 4 : 0;
+      const saturation = 72 - Math.min(14, Math.floor(count / 2)) + (index % 2 === 0 ? 4 : -2);
+      const lightness = 56 + ((index % 3) - 1) * 6 - spreadBoost;
+      return hslToHex(baseHue, clampNumber(saturation, 52, 78, 68), clampNumber(lightness, 42, 64, 54));
+    }
+
+    function getWheelLabelMetrics(count) {
+      const safeCount = Math.max(count, 1);
+      const fontSize = clampNumber(20 - ((safeCount - 2) * 0.8), 9, 18, 16);
+      const radialOffset = clampNumber(126 - ((safeCount - 2) * 3.8), 72, 120, 108);
+      const maxChars = clampNumber(18 - Math.floor((safeCount - 1) / 2), 6, 18, 14);
+
+      return {
+        fontSize: roundMetric(fontSize),
+        radialOffset: roundMetric(radialOffset),
+        maxChars: Math.round(maxChars)
+      };
+    }
+
+    function buildWheelSvg(options, angle, labelMetrics) {
+      const cx = 200;
+      const cy = 200;
+      const radius = 198;
+
+      const sectors = options.map(function (option, index) {
+        const start = index * angle - 90;
+        const end = start + angle;
+        const center = start + angle / 2;
+        const color = option.color || getAutoColor(index, options.length);
+        const path = describeSector(cx, cy, radius, start, end);
+        const textPoint = polarToCartesian(cx, cy, labelMetrics.radialOffset, center);
+        const flipped = center > 90 && center < 270;
+        const textRotation = flipped ? center + 180 : center;
+        const label = truncateLabel(option.label, labelMetrics.maxChars);
+
+        return '' +
+          '<g>' +
+            '<path class="wheel-slice" d="' + path + '" fill="' + escapeAttribute(color) + '"></path>' +
+            '<text class="wheel-text" x="' + roundMetric(textPoint.x) + '" y="' + roundMetric(textPoint.y) + '" font-size="' + labelMetrics.fontSize + '" transform="rotate(' + roundMetric(textRotation) + ' ' + roundMetric(textPoint.x) + ' ' + roundMetric(textPoint.y) + ')">' + escapeHtml(label) + '</text>' +
+          '</g>';
+      }).join("");
+
+      return '' +
+        '<svg class="wheel-svg" viewBox="0 0 400 400" aria-hidden="true">' +
+          sectors +
+        '</svg>';
+    }
+
+    function buildEmptyWheelSvg() {
+      return '' +
+        '<svg class="wheel-svg" viewBox="0 0 400 400" aria-hidden="true">' +
+          '<circle cx="200" cy="200" r="198" fill="url(#emptyWheelFill)"></circle>' +
+          '<defs>' +
+            '<linearGradient id="emptyWheelFill" x1="0%" y1="0%" x2="100%" y2="100%">' +
+              '<stop offset="0%" stop-color="#dccbae"></stop>' +
+              '<stop offset="100%" stop-color="#fbf4ea"></stop>' +
+            '</linearGradient>' +
+          '</defs>' +
+          '<text x="200" y="190" text-anchor="middle" font-size="18" font-weight="700" fill="#675643">Belum ada opsi</text>' +
+          '<text x="200" y="218" text-anchor="middle" font-size="13" fill="#7d6a56">Tambahkan opsi untuk mulai</text>' +
+        '</svg>';
+    }
+
+    function describeSector(cx, cy, radius, startAngle, endAngle) {
+      const start = polarToCartesian(cx, cy, radius, endAngle);
+      const end = polarToCartesian(cx, cy, radius, startAngle);
+      const largeArcFlag = endAngle - startAngle <= 180 ? "0" : "1";
+
+      return [
+        "M", cx, cy,
+        "L", roundMetric(start.x), roundMetric(start.y),
+        "A", radius, radius, 0, largeArcFlag, 0, roundMetric(end.x), roundMetric(end.y),
+        "Z"
+      ].join(" ");
+    }
+
+    function polarToCartesian(cx, cy, radius, angleInDegrees) {
+      const radians = angleInDegrees * Math.PI / 180;
+      return {
+        x: cx + (radius * Math.cos(radians)),
+        y: cy + (radius * Math.sin(radians))
+      };
+    }
+
+    function truncateLabel(label, maxChars) {
+      if (label.length <= maxChars) {
+        return label;
+      }
+
+      return label.slice(0, Math.max(1, maxChars - 1)) + "...";
+    }
+
+    function hslToHex(h, s, l) {
+      const saturation = s / 100;
+      const lightness = l / 100;
+      const chroma = (1 - Math.abs(2 * lightness - 1)) * saturation;
+      const hueSection = h / 60;
+      const x = chroma * (1 - Math.abs((hueSection % 2) - 1));
+      let red = 0;
+      let green = 0;
+      let blue = 0;
+
+      if (hueSection >= 0 && hueSection < 1) {
+        red = chroma;
+        green = x;
+      } else if (hueSection < 2) {
+        red = x;
+        green = chroma;
+      } else if (hueSection < 3) {
+        green = chroma;
+        blue = x;
+      } else if (hueSection < 4) {
+        green = x;
+        blue = chroma;
+      } else if (hueSection < 5) {
+        red = x;
+        blue = chroma;
+      } else {
+        red = chroma;
+        blue = x;
+      }
+
+      const match = lightness - chroma / 2;
+      const r = Math.round((red + match) * 255);
+      const g = Math.round((green + match) * 255);
+      const b = Math.round((blue + match) * 255);
+
+      return "#" + toHex(r) + toHex(g) + toHex(b);
+    }
+
+    function toHex(value) {
+      return value.toString(16).padStart(2, "0");
+    }
+
+    function roundMetric(value) {
+      return Math.round(value * 100) / 100;
+    }
+
+    function createId() {
+      return String(Date.now()) + "-" + Math.random().toString(16).slice(2, 10);
+    }
+
+    function findOption(id) {
+      return state.options.find(function (item) {
+        return item.id === id;
+      });
+    }
+
+    function clampNumber(value, min, max, fallback) {
+      const number = Number(value);
+      if (Number.isNaN(number)) {
+        return fallback;
+      }
+      return Math.min(max, Math.max(min, number));
+    }
+
+    function randomIndex(max) {
+      if (window.crypto && typeof window.crypto.getRandomValues === "function") {
+        const buffer = new Uint32Array(1);
+        window.crypto.getRandomValues(buffer);
+        return buffer[0] % max;
+      }
+      return Math.floor(Math.random() * max);
+    }
+
+    function randomBetween(min, max) {
+      if (max <= min) {
+        return min;
+      }
+
+      if (window.crypto && typeof window.crypto.getRandomValues === "function") {
+        const buffer = new Uint32Array(1);
+        window.crypto.getRandomValues(buffer);
+        const ratio = buffer[0] / 4294967295;
+        return min + (max - min) * ratio;
+      }
+
+      return min + (max - min) * Math.random();
+    }
+
+    function playSpinSound(duration) {
+      const Context = window.AudioContext || window.webkitAudioContext;
+      if (!Context) {
+        return;
+      }
+
+      const context = new Context();
+      const oscillator = context.createOscillator();
+      const gain = context.createGain();
+
+      oscillator.type = "triangle";
+      oscillator.frequency.setValueAtTime(220, context.currentTime);
+      oscillator.frequency.exponentialRampToValueAtTime(105, context.currentTime + duration);
+      gain.gain.setValueAtTime(0.0001, context.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.02, context.currentTime + 0.05);
+      gain.gain.exponentialRampToValueAtTime(0.0001, context.currentTime + duration);
+
+      oscillator.connect(gain);
+      gain.connect(context.destination);
+      oscillator.start();
+      oscillator.stop(context.currentTime + duration);
+      oscillator.onended = function () {
+        context.close().catch(function () {});
+      };
+    }
+
+    function playWinSound() {
+      const Context = window.AudioContext || window.webkitAudioContext;
+      if (!Context) {
+        return;
+      }
+
+      const context = new Context();
+      const notes = [523.25, 659.25, 783.99];
+
+      notes.forEach(function (note, index) {
+        const oscillator = context.createOscillator();
+        const gain = context.createGain();
+        const start = context.currentTime + index * 0.08;
+
+        oscillator.type = "sine";
+        oscillator.frequency.setValueAtTime(note, start);
+        gain.gain.setValueAtTime(0.0001, start);
+        gain.gain.exponentialRampToValueAtTime(0.05, start + 0.02);
+        gain.gain.exponentialRampToValueAtTime(0.0001, start + 0.22);
+
+        oscillator.connect(gain);
+        gain.connect(context.destination);
+        oscillator.start(start);
+        oscillator.stop(start + 0.24);
+      });
+
+      window.setTimeout(function () {
+        context.close().catch(function () {});
+      }, 420);
+    }
+
+    function formatDate(timestamp) {
+      return new Intl.DateTimeFormat("id-ID", {
+        dateStyle: "medium",
+        timeStyle: "short"
+      }).format(new Date(timestamp));
+    }
+
+    function escapeHtml(value) {
+      return String(value)
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#39;");
+    }
+
+    function escapeAttribute(value) {
+      return escapeHtml(value);
+    }
+  </script>
+</body>
+</html>
